@@ -44,7 +44,8 @@ export async function POST(req: NextRequest) {
       return new Response('Failed to find associated document', { status: 500 });
     }
     
-    const doc = chatData.documents as { content: string } | null;
+    // Type assertion to handle strict build environments
+    const doc = chatData.documents as unknown as { content: string } | null;
     const documentText = doc?.content;
     if (!documentText) {
       console.error('CHAT (POST) API: Document content is empty for chat ID:', chatId);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export async function DELETE(
   request: Request,
@@ -11,8 +11,9 @@ export async function DELETE(
     return NextResponse.json({ error: 'Chat ID is required' }, { status: 400 });
   }
 
+  const supabase = getSupabaseAdmin();
   // In a real app, you would also verify ownership of the chat before deleting.
-  const { error } = await supabaseAdmin
+  const { error } = await supabase
     .from('chats')
     .delete()
     .eq('id', chatId);
