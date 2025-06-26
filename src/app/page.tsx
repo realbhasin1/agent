@@ -32,13 +32,13 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const newUploadInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchChats = async () => {
     try {
       const response = await fetch('/api/chats');
       if (!response.ok) {
         if (response.status === 404) {
-          console.warn('GET /api/chats 404 - No chats found, which can be normal.');
           setChats([]);
           return;
         }
@@ -55,6 +55,10 @@ export default function Home() {
   useEffect(() => {
     fetchChats();
   }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -114,7 +118,7 @@ export default function Home() {
       setError(err.message);
     } finally {
       setIsUploading(false);
-      if (e.target) e.target.value = ""; // Reset input
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -123,7 +127,6 @@ export default function Home() {
     if (!messageToSend.trim() || !activeChat) return;
 
     const userMessage: Message = { role: 'user', content: messageToSend };
-    // This single state update prevents a race condition that garbles the streamed response.
     setMessages((prev) => [...prev, userMessage, { role: 'assistant', content: '' }]);
     setCurrentMessage('');
     setIsLoading(true);
@@ -136,13 +139,8 @@ export default function Home() {
         body: JSON.stringify({ message: messageToSend, chatId: activeChat }),
       });
 
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
-      }
-      
-      if (!response.body) {
-        throw new Error("Response body is empty.");
-      }
+      if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      if (!response.body) throw new Error("Response body is empty.");
       
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -153,16 +151,14 @@ export default function Home() {
         
         const chunk = decoder.decode(value, { stream: true });
         
-        setMessages((prevMessages) => {
-          return prevMessages.map((msg, index) => {
-            if (index === prevMessages.length - 1 && msg.role === 'assistant') {
-              return { ...msg, content: msg.content + chunk };
-            }
-            return msg;
-          });
-        });
+        setMessages((prevMessages) =>
+          prevMessages.map((msg, index) =>
+            index === prevMessages.length - 1 && msg.role === 'assistant'
+              ? { ...msg, content: msg.content + chunk }
+              : msg
+          )
+        );
       }
-
     } catch (err: any) {
       console.error("Error sending message:", err);
       setMessages((prev) => {
@@ -185,15 +181,13 @@ export default function Home() {
       setActiveChatTitle(chat.chat_title);
     }
     setIsFetchingMessages(true);
-    setMessages([]); // Immediately clear messages to show loading state
+    setMessages([]);
     try {
       const response = await fetch(`/api/chats/${chatId}/messages`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch messages');
-      }
+      if (!response.ok) throw new Error('Failed to fetch messages');
       const data = await response.json();
       setMessages(data.messages || []);
-    } catch (err) {
+    } catch (err: any) {
       setError('Failed to load messages.');
     } finally {
       setIsFetchingMessages(false);
@@ -266,13 +260,11 @@ export default function Home() {
                     </Button>
                   </div>
                   {error && (
-                    <p className="text-sm mt-2 text-red-500">
-                      {error}
-                    </p>
+                    <p className="text-sm mt-2 text-red-500">{error}</p>
                   )}
                 </div>
               )}
-              <div className="border rounded-lg p-4 flex-grow flex flex-col bg-gray-50">
+              <div className="border rounded-lg p-4 flex-grow flex flex-col bg-gray-50 min-h-0">
                 <div className="flex-grow overflow-y-auto pr-4 space-y-4">
                   {messages.length > 0 ? (
                     messages.map((msg, index) => (
@@ -284,13 +276,10 @@ export default function Home() {
                     ))
                   ) : (
                     <div className="flex items-center justify-center h-full text-gray-500">
-                      {isFetchingMessages
-                        ? "Loading messages..."
-                        : activeChat
-                        ? "Ask a question to get started."
-                        : "Select a chat from the left or upload a document to start."}
+                      {isFetchingMessages ? "Loading messages..." : activeChat ? "Ask a question to get started." : "Select a chat from the left or upload a document to start."}
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
                 <div className="mt-4 flex flex-col gap-2">
                   <div className="flex items-center gap-2">
@@ -350,19 +339,19 @@ export default function Home() {
           <CardContent className="flex flex-col gap-4">
             <div>
               <Label>Name</Label>
-              <p className="text-sm text-gray-500">John Doe</p>
+              <p className="text-sm text-gray-500">Nishit Bhasin</p>
             </div>
             <div>
               <Label>Email</Label>
-              <p className="text-sm text-gray-500">john.doe@example.com</p>
+              <p className="text-sm text-gray-500">nishit@incskill.com</p>
             </div>
             <div>
-              <Label>Phone</Label>
-              <p className="text-sm text-gray-500">123-456-7890</p>
+              <Label>Subscription</Label>
+              <p className="text-sm text-green-600 font-semibold">Active Pro</p>
             </div>
           </CardContent>
           <CardFooter>
-            <Button variant="outline">Edit Profile</Button>
+            <Button variant="outline">View Full Profile</Button>
           </CardFooter>
         </Card>
       </aside>
